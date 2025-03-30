@@ -1,18 +1,20 @@
-// Simplified Cloudflare Worker that ignores path and focuses on just the username parameter
+// Cloudflare Worker script to proxy API requests to Succinct Stats API
+// This handles CORS issues by acting as a middleware
 
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
 async function handleRequest(request) {
-  // CORS headers with localhost allowed
+  // CORS headers for development and production
   const corsHeaders = {
-    'Access-Control-Allow-Origin': 'http://localhost:5173',
+    'Access-Control-Allow-Origin': 'http://localhost:5173', // Development
+    // 'Access-Control-Allow-Origin': 'https://yourproductiondomain.com', // Uncomment for production
     'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   }
   
-  // Handle preflight requests
+  // Handle preflight OPTIONS request
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -20,7 +22,7 @@ async function handleRequest(request) {
     })
   }
   
-  // Get URL parameters
+  // Get URL parameters - ignoring path for more reliable operation
   const url = new URL(request.url)
   const username = url.searchParams.get('username')
   
@@ -35,7 +37,7 @@ async function handleRequest(request) {
   }
   
   try {
-    // Fetch from the original API
+    // Fetch data from the actual API
     const apiUrl = `https://www.succinct-stats.xyz/api/leaderboard?action=getByUsername&username=${username}`
     const response = await fetch(apiUrl)
     
@@ -45,7 +47,7 @@ async function handleRequest(request) {
     
     const data = await response.json()
     
-    // Return with CORS headers
+    // Return the response with CORS headers
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: {
